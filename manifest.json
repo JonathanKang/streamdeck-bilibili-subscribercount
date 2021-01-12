@@ -1,0 +1,41 @@
+{
+  "Actions": [
+    {
+      "Icon": "resources/actionIcon",
+      "Name": "Bilibili Subscriber Count",
+      "States": [
+        {
+          "Image": "resources/actionDefaultImage",
+          "TitleAlignment": "middle",
+          "FontSize": "16"
+        }
+      ],
+      "SupportedInMultiActions": false,
+      "Tooltip": "This action displays your Bilibili subscriber count",
+      "UUID": "com.mugongchuan.bilibilisubscribercount.action"
+    }
+  ],
+  "SDKVersion": 2,
+  "Author": "MuGongChuan",
+  "CodePath": "plugin/main.html",
+  "Description": "This lets you display your Bilibili subscriber count",
+  "Name": "Bilibili Subscriber Count",
+  "Icon": "resources/pluginIcon",
+  "URL": "https://space.bilibili.com/110477307",
+  "PropertyInspectorPath": "propertyinspector/main_pi.html",
+  "Version": "1.4",
+  "OS": [
+    {
+      "Platform": "mac",
+      "MinimumVersion": "10.11"
+    },
+    {
+      "Platform": "windows",
+      "MinimumVersion": "10"
+    }
+  ],
+  "Software": 
+    {
+        "MinimumVersion" : "4.1"
+    }
+}

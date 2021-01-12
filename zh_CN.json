@@ -1,0 +1,8 @@
+{
+  "Description": "实时显示你的Bilibili账户的粉丝数量",
+  "Name": "Bilibili粉丝数量",
+  "com.mugongchuan.bilibilisubscribercount.action": {
+    "Name": "显示Bilibili粉丝数量",
+	"Tooltip": "实时显示你的Bilibili账户的粉丝数量"
+  }
+}

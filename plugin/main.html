@@ -1,0 +1,181 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+	<title>com.mugongchuan.bilibilisubscribercount</title>
+	<meta charset="utf-8" />
+	<script src="common.js"></script>
+</head>
+
+<body>
+	<script>
+
+		let websocket = null;
+		let pluginUUID = null;
+		let settingsCache = {};
+
+		var DestinationEnum = Object.freeze({ "HARDWARE_AND_SOFTWARE": 0, "HARDWARE_ONLY": 1, "SOFTWARE_ONLY": 2 })
+
+		var subscriberdisplayAction = {
+
+			type: "com.mugongchuan.bilibilisubscribercount.action",
+			
+			onKeyUp: function (context, settings, coordinates, userDesiredState) {
+
+				let userID = "";
+				
+				if(settings['userID'] != null) {
+					userID = settings["userID"];
+				}
+				
+				// Fetch the subscriber count and display it.
+				this.DisplaySubscriberCount(context, userID);
+
+			},
+			
+			onWillAppear: function (context, settings, coordinates) {
+
+				let userID = "";
+				if(settings['userID'] != null) {
+					userID = settings['userID'];
+				}
+				
+				settingsCache[context] = settings;
+				this.DisplaySubscriberCount(context, userID);
+
+			},
+
+			SetTitle: function (context, subscriberCount) {
+
+				var json = {
+					"event": "setTitle",
+					"context": context,
+					"payload": {
+						"title": `${subscriberCount}`,
+						"target": DestinationEnum.HARDWARE_AND_SOFTWARE
+					}
+				};
+
+				websocket.send(JSON.stringify(json));
+
+			},
+
+			SetSettings: function (context, settings) {
+				
+				console.log("setting settings: " + JSON.stringify(settings));
+				var json = {
+					"event": "setSettings",
+					"context": context,
+					"payload": settings
+				};
+
+				websocket.send(JSON.stringify(json));
+
+			},
+			
+			SendSettings: function (action, context) {
+
+				const json = {
+					"action": action,
+					"event": "sendToPropertyInspector",
+					"context": context,
+					"payload": settingsCache[context]
+				};
+				
+				websocket.send(JSON.stringify(json));
+
+			},
+			
+			DisplaySubscriberCount: function (context, userID) {
+
+				var biliUrl = 'https://api.bilibili.com/x/relation/stat?vmid=' + userID + '&jsonp=jsonp';
+				var httpRequest = new XMLHttpRequest();
+
+				httpRequest.open('GET', biliUrl, true);
+				httpRequest.send();
+				httpRequest.onreadystatechange = function () {
+
+					if (httpRequest.readyState == 4 && httpRequest.status == 200) {
+						var sCountJson = httpRequest.responseText;
+						const obj = JSON.parse(sCountJson);
+						subscriberdisplayAction.SetTitle(context, obj.data.follower);
+						console.log("url: " + biliUrl);
+						console.log("sub count: " + obj.data.follower);
+						console.log("userID: " + userID);
+					}
+
+				}
+
+			}
+		};
+
+		function connectElgatoStreamDeckSocket(inPort, inPluginUUID, inRegisterEvent, inInfo) {
+
+			pluginUUID = inPluginUUID
+
+			// Open the web socket
+			websocket = new WebSocket("ws://127.0.0.1:" + inPort);
+
+			function registerPlugin(inPluginUUID) {
+				var json = {
+					"event": inRegisterEvent,
+					"uuid": inPluginUUID
+				};
+
+				websocket.send(JSON.stringify(json));
+			};
+
+			websocket.onopen = function () {
+				// WebSocket is connected, send message
+				registerPlugin(pluginUUID);
+			};
+
+			websocket.onmessage = function (evt) {
+				// Received message from Stream Deck
+				var jsonObj = JSON.parse(evt.data);
+				var event = jsonObj['event'];
+				var action = jsonObj['action'];
+				var context = jsonObj['context'];
+				var jsonPayload = jsonObj['payload'] || {};
+
+				if(event == "keyUp") {
+					
+					const settings = jsonPayload['settings'];
+					const coordinates = jsonPayload['coordinates'];
+					const userDesiredState = jsonPayload['userDesiredState'];
+					subscriberdisplayAction.onKeyUp(context, settings, coordinates, userDesiredState);
+					
+				} else if(event == "willAppear") {
+
+					var settings = jsonPayload['settings'];
+					var coordinates = jsonPayload['coordinates'];
+					subscriberdisplayAction.onWillAppear(context, settings, coordinates);
+
+				}
+				else if(event == "sendToPlugin") {
+
+					if(jsonPayload['type'] == "updateSettings") {
+
+						subscriberdisplayAction.SetSettings(context, jsonPayload);
+						settingsCache[context] = jsonPayload;
+
+					} else if(jsonPayload['type'] == "requestSettings") {
+
+						subscriberdisplayAction.SendSettings(action, context);
+
+					}
+					
+				}
+			};
+
+			websocket.onclose = function () {
+				// Websocket is closed
+			};
+
+		};
+
+	</script>
+
+</body>
+
+</html>
