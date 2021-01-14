@@ -13,6 +13,8 @@
 		let websocket = null;
 		let pluginUUID = null;
 		let settingsCache = {};
+		let intervalID = 0;
+		let globalSubscriberCount = 0;
 
 		var DestinationEnum = Object.freeze({ "HARDWARE_AND_SOFTWARE": 0, "HARDWARE_ONLY": 1, "SOFTWARE_ONLY": 2 })
 
@@ -26,10 +28,10 @@
 				
 				if(settings['userID'] != null) {
 					userID = settings["userID"];
+
+					// Fetch the subscriber count and display it.
+					this.DisplaySubscriberCount(context, userID);
 				}
-				
-				// Fetch the subscriber count and display it.
-				this.DisplaySubscriberCount(context, userID);
 
 			},
 			
@@ -38,11 +40,25 @@
 				let userID = "";
 				if(settings['userID'] != null) {
 					userID = settings['userID'];
+
+					this.DisplaySubscriberCount(context, userID);
 				}
 				
 				settingsCache[context] = settings;
-				this.DisplaySubscriberCount(context, userID);
 
+			},
+			
+			onWillDisappear: function (context, settings, coordinates) {
+			
+				clearInterval(intervalID);
+			
+			},
+			
+			UpdateSubscriberCount: function(context, userID) {
+
+				subscriberdisplayAction.DisplaySubscriberCount(context, userID);
+				subscriberdisplayAction.SetTitle(context, globalSubscriberCount);
+			
 			},
 
 			SetTitle: function (context, subscriberCount) {
@@ -98,10 +114,13 @@
 					if (httpRequest.readyState == 4 && httpRequest.status == 200) {
 						var sCountJson = httpRequest.responseText;
 						const obj = JSON.parse(sCountJson);
-						subscriberdisplayAction.SetTitle(context, obj.data.follower);
-						console.log("url: " + biliUrl);
-						console.log("sub count: " + obj.data.follower);
-						console.log("userID: " + userID);
+						globalSubscriberCount = obj.data.follower;
+						console.log("setting subscriber count: " + globalSubscriberCount);
+						subscriberdisplayAction.SetTitle(context, globalSubscriberCount);
+						
+						if(intervalID == 0) {
+							intervalID = setInterval( function() { subscriberdisplayAction.UpdateSubscriberCount(context, userID); }, 60000 );
+						}
 					}
 
 				}
@@ -150,6 +169,12 @@
 					var settings = jsonPayload['settings'];
 					var coordinates = jsonPayload['coordinates'];
 					subscriberdisplayAction.onWillAppear(context, settings, coordinates);
+
+				} else if(event == "willDisappear") {
+
+					var settings = jsonPayload['settings'];
+					var coordinates = jsonPayload['coordinates'];
+					subscriberdisplayAction.onWillDisappear(context, settings, coordinates);
 
 				}
 				else if(event == "sendToPlugin") {
